@@ -41,7 +41,7 @@
             <span class="text-2xl">🏛️</span>
             <div>
                 <h1 class="text-lg text-sky-600 leading-tight">다섯 개의 탑</h1>
-                <p class="text-[11px] text-slate-400">대장탑 수동 지정 기능 추가</p>
+                <p class="text-[11px] text-slate-400">모바일 최적화 및 맞춤 점수 계산기</p>
             </div>
         </div>
         <button onclick="resetAll()" class="bg-rose-400 hover:bg-rose-500 text-white text-xs px-3 py-1.5 rounded-lg crayon-btn font-bold">
@@ -61,7 +61,7 @@
                     <button onclick="addPlayer()" class="bg-sky-500 text-white text-xs px-2.5 py-1 rounded crayon-btn font-bold">추가</button>
                 </div>
             </div>
-            <!-- 플레이어 탭 목록 (삭제 버튼 포함) -->
+            <!-- 플레이어 탭 목록 -->
             <div id="player-tabs" class="flex gap-1.5 overflow-x-auto py-1 items-center">
                 <!-- 동적 생성 -->
             </div>
@@ -88,10 +88,10 @@
             </h2>
             <div class="flex items-center justify-between bg-rose-50 p-2.5 rounded-lg border border-rose-200">
                 <span class="text-xs text-rose-900">허문카드 장수 (-1, -2, -3...)</span>
-                <div class="flex items-center gap-2">
-                    <button onclick="adjustPenalty(-1)" class="w-7 h-7 bg-rose-200 text-rose-800 rounded font-bold">-</button>
-                    <span id="penalty-count" class="font-bold text-sm w-5 text-center">0</span>
-                    <button onclick="adjustPenalty(1)" class="w-7 h-7 bg-rose-400 text-white rounded font-bold">+</button>
+                <div class="flex items-center gap-3">
+                    <button onclick="adjustPenalty(-1)" class="w-9 h-9 bg-rose-200 text-rose-800 rounded-lg font-bold text-base flex items-center justify-center">-</button>
+                    <span id="penalty-count" class="font-bold text-base w-6 text-center">0</span>
+                    <button onclick="adjustPenalty(1)" class="w-9 h-9 bg-rose-400 text-white rounded-lg font-bold text-base flex items-center justify-center">+</button>
                 </div>
             </div>
         </section>
@@ -100,7 +100,7 @@
         <section class="bg-sky-50 p-3 rounded-xl border-2 border-sky-300 flex justify-between items-center">
             <div>
                 <span class="text-xs text-sky-900 font-bold block" id="current-player-score-label">최종 점수</span>
-                <span class="text-[10px] text-slate-500">(탑 득점 + 대장보너스) - (허문카드 감점)</span>
+                <span class="text-[10px] text-slate-500">(카드장수 + 대장보너스) × 0점보너스 - 허문감점</span>
             </div>
             <div class="text-2xl text-sky-600 font-bold" id="final-score-display">0 점</div>
         </section>
@@ -108,7 +108,7 @@
         <!-- 제일 하단: 실시간 탑 비주얼 점수 현황판 (랭킹) -->
         <section class="bg-white/95 crayon-border p-3 flex flex-col gap-2 mt-2">
             <h2 class="text-base text-sky-700 border-b border-sky-100 pb-1.5 flex justify-between items-center">
-                <span>🏆 실시간 점수계산기</span>
+                <span>🏆 실시간 점수 계산기</span>
                 <span class="text-[10px] bg-sky-100 text-sky-600 px-2 py-0.5 rounded-full">다섯개의탑</span>
             </h2>
             <div id="ranking-list" class="flex flex-col gap-2">
@@ -119,17 +119,16 @@
 
     <!-- 제작자 정보 -->
     <footer class="w-full bg-white/95 crayon-border p-2.5 text-center flex flex-row justify-between items-center text-xs text-slate-500">
-        <span>다섯 개의 탑 게임</span>
+        <span>다섯 개의 탑 </span>
         <span class="font-bold text-sky-600">제작자: 천상민</span>
     </footer>
 
     <script>
-        // 초기화된 플레이어 데이터 구조 (수동 대장 지정을 위한 manualLeaderId 속성 추가)
         let players = [
             {
                 name: '플레이어 1',
                 penaltyCount: 0,
-                manualLeaderId: null, // 사용자가 직접 지정한 대장 탑 ID (null이면 자동 계산)
+                manualLeaderId: null,
                 towers: [
                     { id: 'pink', name: '사탕', bg: 'bg-pink-400', border: 'border-pink-500', text: 'text-pink-900', lightBg: 'bg-pink-50', count: 0, hasZero: false },
                     { id: 'purple', name: '으스스', bg: 'bg-purple-400', border: 'border-purple-500', text: 'text-purple-900', lightBg: 'bg-purple-50', count: 0, hasZero: false },
@@ -193,8 +192,7 @@
             let t = p.towers.find(x => x.id === towerId);
             if (t) {
                 t.count = Math.max(0, t.count + delta);
-                // 장수가 0이 되거나 해서 대장탑으로 지정되었던 탑이 비게 되면 수동 대장 초기화
-                if (p.manualLeaderId === towerId && t.count === 0 && !t.hasZero) {
+                if (p.manualLeaderId === towerId && t.count === 0) {
                     p.manualLeaderId = null;
                 }
                 renderAll();
@@ -210,23 +208,18 @@
             }
         }
 
-        // 대장탑 토글 (수동 지정/해제)
         function toggleLeader(towerId) {
             let p = players[currentPlayerIndex];
             let t = p.towers.find(x => x.id === towerId);
             
-            // 빈 탑은 대장으로 지정할 수 없음
-            let effectiveCount = t.hasZero ? Math.max(0, t.count - 1) : t.count;
-            if (t.count === 0 && !t.hasZero) {
+            if (t.count === 0) {
                 alert('카드가 없는 빈 탑은 대장으로 지정할 수 없습니다.');
                 return;
             }
 
             if (p.manualLeaderId === towerId) {
-                // 이미 수동 대장인 상태에서 누르면 해제 (다시 자동 선정 모드로 복귀)
                 p.manualLeaderId = null;
             } else {
-                // 새로운 탑을 대장으로 수동 지정
                 p.manualLeaderId = towerId;
             }
             renderAll();
@@ -252,15 +245,13 @@
             }
         }
 
-        // 대장탑 결정 로직: 수동 지정된 값이 있으면 그 값을 우선 사용, 없으면 가장 장수가 많은 탑 자동 선정
         function determineLeaderTower(player) {
             if (player.manualLeaderId) {
-                // 수동 지정된 탑이 실제로 유효한지 확인 (카드가 남아있는지)
                 let t = player.towers.find(x => x.id === player.manualLeaderId);
-                if (t && (t.count > 0 || t.hasZero)) {
+                if (t && t.count > 0) {
                     return player.manualLeaderId;
                 } else {
-                    player.manualLeaderId = null; // 유효하지 않으면 자동 모드로 복구
+                    player.manualLeaderId = null;
                 }
             }
 
@@ -268,18 +259,16 @@
             let candidates = [];
 
             player.towers.forEach(t => {
-                let effectiveCount = t.hasZero ? Math.max(0, t.count - 1) : t.count;
-
-                if (effectiveCount > maxCount) {
-                    maxCount = effectiveCount;
+                if (t.count > maxCount) {
+                    maxCount = t.count;
                     candidates = [t.id];
-                } else if (effectiveCount === maxCount) {
+                } else if (t.count === maxCount) {
                     candidates.push(t.id);
                 }
             });
 
             if (maxCount <= 0) return null;
-            return candidates[0]; // 중도시 첫 번째 후보 반환
+            return candidates[0];
         }
 
         function calculatePlayerScore(player) {
@@ -287,15 +276,17 @@
             let totalTowerScore = 0;
 
             player.towers.forEach(tower => {
-                let actualCards = tower.hasZero ? Math.max(0, tower.count - 1) : tower.count;
-                if (actualCards === 0 && !tower.hasZero) return;
+                if (tower.count === 0) return;
 
-                let multiplier = tower.hasZero ? 2 : 1;
-                let score = tower.count * multiplier;
-
+                // 1. 카드장수 + 대장보너스 (대장탑일 경우 카드장수만큼 추가 점수 부여)
+                let basePlusLeader = tower.count;
                 if (tower.id === leaderId) {
-                    score += tower.count * 1;
+                    basePlusLeader += tower.count; // 대장보너스 (장수만큼 더해짐)
                 }
+
+                // 2. 0점탑 꼭대기 체크 시 2배(x2) 곱하기 적용
+                let score = tower.hasZero ? basePlusLeader * 2 : basePlusLeader;
+
                 totalTowerScore += score;
             });
 
@@ -329,7 +320,7 @@
             towersContainer.innerHTML = '';
 
             currentPlayer.towers.forEach(tower => {
-                let isLeader = (tower.id === leaderId && (tower.hasZero ? tower.count > 1 : tower.count > 0));
+                let isLeader = (tower.id === leaderId && tower.count > 0);
                 
                 let blocksHtml = '';
                 
@@ -353,7 +344,7 @@
                         <div class="text-center w-full mb-1">
                             <span class="text-[10px] font-bold ${tower.text} block truncate">${tower.name}</span>
                             <button onclick="toggleLeader('${tower.id}')" class="text-[9px] px-1 py-0.5 rounded font-bold block mt-0.5 w-full transition-all ${isLeader ? 'bg-amber-400 text-amber-900 shadow-sm' : 'bg-slate-100 text-slate-400 hover:bg-slate-200'}">
-                                ${isLeader ? '👑 대장 (지정됨)' : '👑 대장'}
+                                ${isLeader ? '👑 대장 ' : '👑 대장'}
                             </button>
                         </div>
 
@@ -361,16 +352,17 @@
                             ${blocksHtml}
                         </div>
 
-                        <div class="w-full flex flex-col gap-1">
+                        <div class="w-full flex flex-col gap-1.5">
                             <div class="flex items-center justify-between bg-sky-50 px-1 py-0.5 rounded text-[10px]">
                                 <span>장수</span>
                                 <strong class="${tower.text}">${tower.count}</strong>
                             </div>
+                            <!-- 모바일 최적화: 높이와 터치 영역이 넓어진 +, - 버튼 -->
                             <div class="flex justify-between gap-1">
-                                <button onclick="updateCount('${tower.id}', -1)" class="w-full bg-slate-200 text-slate-700 rounded font-bold text-xs py-1">-</button>
-                                <button onclick="updateCount('${tower.id}', 1)" class="${tower.bg} text-white rounded font-bold text-xs py-1 w-full">+</button>
+                                <button onclick="updateCount('${tower.id}', -1)" class="w-full bg-slate-200 text-slate-700 rounded-lg font-bold text-sm py-2 flex items-center justify-center active:bg-slate-300">-</button>
+                                <button onclick="updateCount('${tower.id}', 1)" class="${tower.bg} text-white rounded-lg font-bold text-sm py-2 w-full flex items-center justify-center shadow-sm">+</button>
                             </div>
-                            <label class="flex items-center justify-center gap-0.5 text-[9px] text-slate-600 cursor-pointer bg-slate-100 py-0.5 rounded mt-0.5">
+                            <label class="flex items-center justify-center gap-0.5 text-[9px] text-slate-600 cursor-pointer bg-slate-100 py-1 rounded mt-0.5">
                                 <input type="checkbox" ${tower.hasZero ? 'checked' : ''} onchange="toggleZero('${tower.id}')" class="accent-sky-500">
                                 0탑꼭대기
                             </label>
